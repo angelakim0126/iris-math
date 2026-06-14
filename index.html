@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0524">
+  <title>🚀 Cosmic Math — Iris</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="stars" aria-hidden="true"></div>
+  <div id="app">
+    <!-- Home -->
+    <div id="home" class="screen">
+      <header class="home-header">
+        <h1>🚀 Cosmic Math 🌟</h1>
+        <p class="subtitle">Conquer the times tables, planet by planet!</p>
+      </header>
+
+      <div class="stats-bar">
+        <div class="stat">
+          <span class="stat-label">🪐 Planets</span>
+          <span class="stat-value"><span id="mastered-stat">0</span> / 12</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">⚡ Speed Best</span>
+          <span class="stat-value" id="best-stat">0</span>
+        </div>
+      </div>
+
+      <div class="progress-bar" aria-label="Planets mastered">
+        <div class="progress-fill" id="home-progress"></div>
+      </div>
+
+      <h3 class="section-title">🌌 Pick a planet to learn</h3>
+      <div class="planets-grid" id="planets-grid"></div>
+
+      <button class="speed-btn" id="speed-btn">⚡ Speed Round (60s)</button>
+
+      <div class="settings-row">
+        <label><input type="checkbox" id="sound-toggle"> 🔊 Sound</label>
+        <button id="reset-btn" class="link-btn">Start over</button>
+      </div>
+    </div>
+
+    <!-- Game screen -->
+    <div id="game" class="screen hidden">
+      <div class="game-header">
+        <button class="back-btn" id="back-btn">← Home</button>
+        <div class="mode-title" id="game-mode-title"></div>
+        <div class="game-stat" id="game-stat-display"></div>
+      </div>
+      <div class="game-content" id="game-content"></div>
+    </div>
+
+    <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
