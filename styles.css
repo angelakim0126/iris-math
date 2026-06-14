@@ -72,6 +72,41 @@ h1 {
   margin-top: 4px;
 }
 
+/* Name pill */
+.name-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 14px; box-shadow: var(--card-glow);
+  max-width: 360px; margin: 0 auto;
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.name-pill-icon { font-size: 1.1rem; }
+.name-pill-label { color: var(--text-dim); font-size: 0.92rem; font-weight: 600; }
+.name-pill input {
+  background: transparent; border: none; color: var(--text);
+  font-family: inherit; font-size: 1rem; font-weight: 700;
+  text-align: left; flex: 1; outline: none; min-width: 0;
+  padding: 2px 0;
+  border-bottom: 1px dashed transparent;
+  transition: border-color 0.15s;
+}
+.name-pill input:focus { border-bottom-color: var(--accent); }
+.name-pill input::placeholder { color: var(--text-dim); font-style: italic; font-weight: 500; }
+
+/* Mission log */
+.mission-log-section {
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 16px; padding: 14px 16px;
+  box-shadow: var(--card-glow);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.mission-log-section h3 {
+  font-size: 0.92rem; color: var(--accent-3); text-align: center;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 10px; font-weight: 800;
+}
+
 /* Stats */
 .stats-bar { display: flex; gap: 10px; }
 .stat {

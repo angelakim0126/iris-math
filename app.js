@@ -159,6 +159,46 @@ function renderLeaderboardHtml(highlight) {
 }
 
 // ===========================
+// Mission Log — record every clean ladder run (all 12 right)
+// ===========================
+function loadMissionLog() {
+  try { return JSON.parse(localStorage.getItem('imth_mission_log') || '[]'); }
+  catch (e) { return []; }
+}
+function saveMissionLog(arr) {
+  // newest first; cap at 50
+  localStorage.setItem('imth_mission_log', JSON.stringify(arr.slice(0, 50)));
+}
+function addMissionLogEntry(table, name) {
+  const entry = { table, name: (name || 'Player').slice(0, 24), ts: Date.now() };
+  const arr = loadMissionLog();
+  arr.unshift(entry);
+  saveMissionLog(arr);
+  return entry;
+}
+function getCurrentName() {
+  return (localStorage.getItem('imth_test_name') || '').trim() || 'Player';
+}
+function renderMissionLogHtml(highlight) {
+  const arr = loadMissionLog();
+  let html = '<h3>🚀 Mission Log</h3>';
+  if (arr.length === 0) {
+    html += '<div class="leaderboard-empty">No planets conquered yet — pick one to start! ⭐</div>';
+    return html;
+  }
+  html += '<table class="leaderboard"><thead><tr><th>Who</th><th>Planet</th><th>When</th></tr></thead><tbody>';
+  arr.slice(0, 10).forEach(e => {
+    const isHi = highlight && e.ts === highlight.ts;
+    const d = new Date(e.ts);
+    const dateStr = d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const p = PLANETS[e.table] || { emoji: '⭐' };
+    html += `<tr class="${isHi ? 'highlight' : ''}"><td>${escapeHtml(e.name)}</td><td>${p.emoji} ${e.table}×</td><td>${dateStr}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// ===========================
 // Home screen
 // ===========================
 function renderHome() {
@@ -166,6 +206,8 @@ function renderHome() {
   $('best-stat').textContent = state.speedBest;
   $('home-progress').style.width = `${(state.mastered.size / TABLES) * 100}%`;
   $('sound-toggle').checked = state.soundEnabled;
+  $('player-name-home').value = localStorage.getItem('imth_test_name') || '';
+  $('mission-log-section').innerHTML = renderMissionLogHtml();
 
   const grid = $('planets-grid');
   let html = '';
@@ -320,6 +362,7 @@ function encouragement() {
 function finishLadder() {
   const s = state.ladder;
   const allRight = s.errorsInRun === 0;
+  let logEntry = null;
   if (allRight) {
     if (!state.mastered.has(s.table)) {
       state.mastered.add(s.table);
@@ -328,6 +371,7 @@ function finishLadder() {
     } else {
       confetti(70); sounds.milestone();
     }
+    logEntry = addMissionLogEntry(s.table, getCurrentName());
   } else {
     confetti(40);
   }
@@ -337,11 +381,12 @@ function finishLadder() {
     <div class="result-card">
       <div class="result-emoji">${allRight ? '🏆' : '🚀'}</div>
       <h2>${allRight ? `${p.emoji} ${s.table}× planet mastered!` : `Good try on ${s.table}×!`}</h2>
-      <p class="sub">${allRight ? 'All 12 perfect on the first try.' : `You got ${LADDER_END - s.errorsInRun} of ${LADDER_END}. Try again to master this planet — you need all 12 right!`}</p>
+      <p class="sub">${allRight ? `All 12 perfect — logged as <b>${escapeHtml(getCurrentName())}</b>.` : `You got ${LADDER_END - s.errorsInRun} of ${LADDER_END}. Try again to master this planet — you need all 12 right!`}</p>
       <div class="btn-row" style="margin-top: 16px;">
         <button class="action-btn" id="ladder-again">${allRight ? 'Do it again' : 'Try again'}</button>
         <button class="action-btn secondary" id="ladder-home">🏠 Home</button>
       </div>
+      ${allRight ? `<div class="leaderboard-section">${renderMissionLogHtml(logEntry)}</div>` : ''}
     </div>`;
   $('ladder-again').onclick = () => startLadder(s.table);
   $('ladder-home').onclick = showHome;
@@ -500,13 +545,21 @@ $('back-btn').addEventListener('click', showHome);
 $('speed-btn').addEventListener('click', startSpeed);
 $('sound-toggle').addEventListener('change', e => { state.soundEnabled = e.target.checked; save(); });
 $('reset-btn').addEventListener('click', () => {
-  if (confirm('Start over? This clears mastered planets, best speed, and the leaderboard.')) {
+  if (confirm('Start over? This clears mastered planets, best speed, the leaderboard, and the mission log.')) {
     state.mastered = new Set();
     state.speedBest = 0;
     saveMastered(); save();
     localStorage.removeItem('imth_leaderboard');
+    localStorage.removeItem('imth_mission_log');
     renderHome();
   }
+});
+
+// Name input wired on home (synced with cached imth_test_name, used by both ladder + speed)
+$('player-name-home').addEventListener('input', e => {
+  const v = (e.target.value || '').trim().slice(0, 24);
+  if (v) localStorage.setItem('imth_test_name', v);
+  else localStorage.removeItem('imth_test_name');
 });
 
 document.addEventListener('keydown', e => {
