@@ -233,8 +233,42 @@ function renderHome() {
   }
   grid.innerHTML = html;
   grid.querySelectorAll('.planet-btn').forEach(b => {
-    b.addEventListener('click', () => startLadder(parseInt(b.dataset.table, 10)));
+    b.addEventListener('click', () => startStudy(parseInt(b.dataset.table, 10)));
   });
+}
+
+// ===========================
+// STUDY MODE — show all 12 facts for a table, then offer the ladder
+// ===========================
+function startStudy(table) {
+  state.currentMode = 'study';
+  state.study = { table };
+  homeEl.classList.add('hidden');
+  gameEl.classList.remove('hidden');
+  $('game-mode-title').textContent = `${PLANETS[table].emoji} ${table}× Times Table`;
+  renderStudy();
+}
+
+function renderStudy() {
+  const { table } = state.study;
+  const isMastered = state.mastered.has(table);
+  $('game-stat-display').textContent = isMastered ? '⭐ Mastered' : 'Study time';
+
+  let html = '<div class="position-label">📖 Look at the facts. When you know them, tap the button below to play!</div>';
+  html += '<div class="study-grid">';
+  for (let i = 1; i <= LADDER_END; i++) {
+    const ans = table * i;
+    html += `
+      <div class="fact-card">
+        <span class="fact-eq">${table} × ${i}</span>
+        <span class="fact-eq-eq">=</span>
+        <span class="fact-ans">${ans}</span>
+      </div>`;
+  }
+  html += '</div>';
+  html += `<div class="btn-row"><button class="action-btn" id="study-play">🚀 I'm ready — play the ${table}× ladder</button></div>`;
+  $('game-content').innerHTML = html;
+  $('study-play').onclick = () => startLadder(table);
 }
 
 function showHome() {
@@ -387,6 +421,7 @@ function finishLadder() {
   }
   // Log every completed run, not just 12/12 — practice counts!
   const logEntry = addMissionLogEntry(s.table, getCurrentName(), score, LADDER_END);
+  s.completed = true;  // prevent double-log if Home is clicked from result screen
 
   const p = PLANETS[s.table];
   $('game-content').innerHTML = `
@@ -526,6 +561,7 @@ function speedHandleChoice(val, btn) {
 
 function finishSpeed() {
   const s = state.speed;
+  s.ended = true;  // prevent double-log on result-screen Home click
   const score = s.score;
   const isNewBest = score > state.speedBest;
   if (isNewBest) { state.speedBest = score; save(); }
@@ -553,7 +589,31 @@ function finishSpeed() {
 // ===========================
 // Event wiring
 // ===========================
-$('back-btn').addEventListener('click', showHome);
+// Bail-aware Home button: log partial progress before returning home
+$('back-btn').addEventListener('click', () => {
+  bailCurrentGame();
+  showHome();
+});
+
+function bailCurrentGame() {
+  // Ladder: log how far she got (levels she actually answered, minus errors)
+  if (state.currentMode === 'ladder' && state.ladder && !state.ladder.completed) {
+    const completed = state.ladder.level - 1; // levels she advanced past
+    if (completed > 0) {
+      const score = Math.max(0, completed - state.ladder.errorsInRun);
+      addMissionLogEntry(state.ladder.table, getCurrentName(), score, LADDER_END);
+      state.ladder.completed = true;
+    }
+  }
+  // Speed Round: log score so far if she's started and not already ended
+  if (state.currentMode === 'speed' && state.speed && state.speed.started && !state.speed.ended) {
+    if (state.speed.score > 0) {
+      addLeaderboardEntry(state.speed.name || getCurrentName(), state.speed.score);
+    }
+    state.speed.ended = true;
+    if (state.speed.timer) { clearInterval(state.speed.timer); state.speed.timer = null; }
+  }
+}
 $('speed-btn').addEventListener('click', startSpeed);
 $('sound-toggle').addEventListener('change', e => { state.soundEnabled = e.target.checked; save(); });
 $('reset-btn').addEventListener('click', () => {
