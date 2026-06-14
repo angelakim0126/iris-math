@@ -169,8 +169,14 @@ function saveMissionLog(arr) {
   // newest first; cap at 50
   localStorage.setItem('imth_mission_log', JSON.stringify(arr.slice(0, 50)));
 }
-function addMissionLogEntry(table, name) {
-  const entry = { table, name: (name || 'Player').slice(0, 24), ts: Date.now() };
+function addMissionLogEntry(table, name, score, total) {
+  const entry = {
+    table,
+    name: (name || 'Player').slice(0, 24),
+    score: score != null ? score : total,
+    total: total != null ? total : LADDER_END,
+    ts: Date.now(),
+  };
   const arr = loadMissionLog();
   arr.unshift(entry);
   saveMissionLog(arr);
@@ -183,16 +189,21 @@ function renderMissionLogHtml(highlight) {
   const arr = loadMissionLog();
   let html = '<h3>🚀 Mission Log</h3>';
   if (arr.length === 0) {
-    html += '<div class="leaderboard-empty">No planets conquered yet — pick one to start! ⭐</div>';
+    html += '<div class="leaderboard-empty">No runs yet — pick a planet to start! ⭐</div>';
     return html;
   }
-  html += '<table class="leaderboard"><thead><tr><th>Who</th><th>Planet</th><th>When</th></tr></thead><tbody>';
+  html += '<table class="leaderboard"><thead><tr><th>Who</th><th>Planet</th><th>Score</th><th>When</th></tr></thead><tbody>';
   arr.slice(0, 10).forEach(e => {
     const isHi = highlight && e.ts === highlight.ts;
     const d = new Date(e.ts);
     const dateStr = d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     const p = PLANETS[e.table] || { emoji: '⭐' };
-    html += `<tr class="${isHi ? 'highlight' : ''}"><td>${escapeHtml(e.name)}</td><td>${p.emoji} ${e.table}×</td><td>${dateStr}</td></tr>`;
+    // Backward compat: older entries may not have score/total; treat as perfect mastery
+    const score = e.score != null ? e.score : LADDER_END;
+    const total = e.total != null ? e.total : LADDER_END;
+    const perfect = score === total;
+    const scoreCell = perfect ? `⭐ <b>${score}/${total}</b>` : `<b>${score}/${total}</b>`;
+    html += `<tr class="${isHi ? 'highlight' : ''}"><td>${escapeHtml(e.name)}</td><td>${p.emoji} ${e.table}×</td><td>${scoreCell}</td><td>${dateStr}</td></tr>`;
   });
   html += '</tbody></table>';
   return html;
@@ -361,8 +372,8 @@ function encouragement() {
 
 function finishLadder() {
   const s = state.ladder;
+  const score = LADDER_END - s.errorsInRun;
   const allRight = s.errorsInRun === 0;
-  let logEntry = null;
   if (allRight) {
     if (!state.mastered.has(s.table)) {
       state.mastered.add(s.table);
@@ -371,22 +382,23 @@ function finishLadder() {
     } else {
       confetti(70); sounds.milestone();
     }
-    logEntry = addMissionLogEntry(s.table, getCurrentName());
   } else {
     confetti(40);
   }
+  // Log every completed run, not just 12/12 — practice counts!
+  const logEntry = addMissionLogEntry(s.table, getCurrentName(), score, LADDER_END);
 
   const p = PLANETS[s.table];
   $('game-content').innerHTML = `
     <div class="result-card">
       <div class="result-emoji">${allRight ? '🏆' : '🚀'}</div>
       <h2>${allRight ? `${p.emoji} ${s.table}× planet mastered!` : `Good try on ${s.table}×!`}</h2>
-      <p class="sub">${allRight ? `All 12 perfect — logged as <b>${escapeHtml(getCurrentName())}</b>.` : `You got ${LADDER_END - s.errorsInRun} of ${LADDER_END}. Try again to master this planet — you need all 12 right!`}</p>
+      <p class="sub">${allRight ? `All 12 perfect — logged as <b>${escapeHtml(getCurrentName())}</b>.` : `You got ${score} of ${LADDER_END}. Logged as <b>${escapeHtml(getCurrentName())}</b>. Try again for the ⭐!`}</p>
       <div class="btn-row" style="margin-top: 16px;">
-        <button class="action-btn" id="ladder-again">${allRight ? 'Do it again' : 'Try again'}</button>
+        <button class="action-btn" id="ladder-again">Try again</button>
         <button class="action-btn secondary" id="ladder-home">🏠 Home</button>
       </div>
-      ${allRight ? `<div class="leaderboard-section">${renderMissionLogHtml(logEntry)}</div>` : ''}
+      <div class="leaderboard-section">${renderMissionLogHtml(logEntry)}</div>
     </div>`;
   $('ladder-again').onclick = () => startLadder(s.table);
   $('ladder-home').onclick = showHome;
